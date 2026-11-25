@@ -1,4 +1,4 @@
-# Dog Wand 1.3.1 - Paper 26.3
+# Dog Wand 1.4 - Paper 26.3
 
 Requires Java 25 and Paper 26.3. No client mods.
 
@@ -19,7 +19,7 @@ The first command creates the plugin and both packs. The second creates a full d
 
 ## Upgrade / installation
 
-Stop the server, replace the old JAR in plugins/ and the old crafting ZIP in your world's datapacks/ directory, then start the server. Keep only one installed copy of each. The resource-pack artwork has not changed; the bundle includes it for new installs.
+Stop the server, replace the old JAR in plugins/ and the old crafting ZIP in your world's datapacks/ directory, then start the server. Keep only one installed copy of each. Version 1.4 updates the dog wand texture. Existing 1.3.1 installations only need the new resource pack for this visual change; plugin behavior and crafting remain the same. The rebuilt plugin reports release 1.4.
 
 Existing 1.1.x, 1.2.x and 1.3.x wands keep their bindings and saved orders. Wands upgrading from before 1.2 start in Point Order until you cycle their per-item mode selection. Wands from 1.0.x have no bindings, and those old owner-wide orders clear on upgrade. Newly crafted wands begin empty. Recipe discoveries remain unlocked. For the 1.3.0 -> 1.3.1 upgrade, replacing only the plugin JAR and restarting is sufficient; the crafting and resource packs have not changed.
 

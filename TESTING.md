@@ -1,4 +1,4 @@
-# Dog Wand 1.3.1 validation
+# Dog Wand 1.4 validation
 
 ## Completed
 
@@ -36,3 +36,7 @@ The live fixture is compiled separately. Actual multi-dog pathfinding, multiplay
 21 new checks in `node tools/check-guard-bindings.mjs` exercise premature arrival outside the region, body clearance at the border, entry aims on all faces and corners, a one-block footprint, clipping that preserves sideways/inward movement and look direction, corner sliding, vertical clipping, and physical final-entry steps. The same suite uses actual Paper item stacks and metadata to verify unique binding IDs with matching counts, styled lore preservation, unbinding, death cleanup, and stale/duplicate/missing count rows.
 
 Two geometry checks resolve real entry footing against a deterministic flat-block world, including the one-block footprint. Together with the existing 85 checks, 108 standalone checks pass. The live server fixture compiles with assertions for clipped movement and actual item lore after unbinding and death, but has not executed here. These checks validate the navigation rules and item metadata; full native pathfinding, client inventory delivery, and multiple dogs entering a region still require gameplay verification.
+
+## 1.4 release
+
+This release changes the resource-pack wand texture and release metadata only. Plugin behavior remains as checked in 1.3.1. Rebuilt the Paper 26.3 plugin, both packs and the development bundle. Release checks verify archive contents, plugin version, JSON validity, and exact texture bytes in the new resource pack. No new gameplay test run is claimed for this visual update.
