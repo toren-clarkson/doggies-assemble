@@ -4,10 +4,10 @@ Only Minecraft **26.3 / Paper** is currently supported. Purpur, Spigot and other
 
 | Artifact | Directory | Current release |
 | --- | --- | --- |
-| Resource pack | `resourcepack/<minecraft-version>/` | [1.4 / 26.3](resourcepack/26.3/dog-wand-1.4-resourcepack-26.3.zip) |
-| Crafting datapack | `datapack/<minecraft-version>/` | [1.4 / 26.3](datapack/26.3/dog-wand-1.4-datapack-26.3.zip) |
-| Server plugin | `plugin/<minecraft-version>/<server-type>/` | [1.4 / 26.3 / Paper](plugin/26.3/paper/dog-wand-1.4-paper-26.3.jar) |
-| Full development bundle | `bundles/<minecraft-version>/<server-type>/` | [1.4 / 26.3 / Paper](bundles/26.3/paper/Dog-Wand-1.4-paper-26.3-development.zip) |
+| Resource pack | `resourcepack/<minecraft-version>/` | [1.7 / 26.3](resourcepack/26.3/dog-wand-1.7-resourcepack-26.3.zip) |
+| Crafting datapack | `datapack/<minecraft-version>/` | [1.7 / 26.3](datapack/26.3/dog-wand-1.7-datapack-26.3.zip) |
+| Server plugin | `plugin/<minecraft-version>/<server-type>/` | [1.7 / 26.3 / Paper](plugin/26.3/paper/dog-wand-1.7-paper-26.3.jar) |
+| Full development bundle | `bundles/<minecraft-version>/<server-type>/` | [1.7 / 26.3 / Paper](bundles/26.3/paper/Dog-Wand-1.7-paper-26.3-development.zip) |
 
 Packs are shared between server types for a given Minecraft version. Plugin JARs and full bundles separate by server type. Every filename includes the Dog Wand release number; building a new release preserves older release files. Rebuilding the same release replaces that release's files.
 

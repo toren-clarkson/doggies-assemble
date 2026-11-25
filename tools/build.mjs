@@ -54,15 +54,111 @@ export function build() {
     'minecraft:custom_data':{PublicBukkitValues:{'dogwand:wand':1}},
     'minecraft:consumable':{consume_seconds:3600,animation:'none',has_consume_particles:false,sound:'minecraft:intentionally_empty'},
     'minecraft:lore':[
-      {text:'LEFT Use mode   SHIFT Cycle',color:'yellow',italic:false},
-      {text:'RIGHT Bind / unbind your dog',color:'yellow',italic:false},
-      {text:'SHIFT + RIGHT Bind all your dogs',color:'yellow',italic:false},
-      {text:''},
-      ...['Point Order','Sit / Stand','Highlight Dogs','Auto Target','Feed Dogs','Guard Region','Release Orders'].map((name,i)=>({text:(i===0?'> ':'  ')+name,color:i===0?'aqua':'dark_gray',bold:i===0,italic:false})),
-      {text:''},
-      {text:'Point at a block to stay, or a mob',color:'gray',italic:false},
-      {text:'to attack.',color:'gray',italic:false},
-      {text:'0 bound dog(s)',color:'dark_aqua',italic:false}
+      {
+        "text": "LEFT CLICK Use mode",
+        "color": "yellow",
+        "italic": false
+      },
+      {
+        "text": "SHIFT Cycle mode",
+        "color": "yellow",
+        "italic": false
+      },
+      {
+        "text": "RIGHT CLICK Bind / unbind your dog",
+        "color": "yellow",
+        "italic": false
+      },
+      {
+        "text": "SHIFT + RIGHT CLICK Select dogs / unbind",
+        "color": "yellow",
+        "italic": false
+      },
+      {
+        "text": "Release SHIFT to confirm selection",
+        "color": "gray",
+        "italic": false
+      },
+      {
+        "text": ""
+      },
+      {
+        "text": "> Point Order",
+        "color": "aqua",
+        "bold": true,
+        "italic": false
+      },
+      {
+        "text": "  Sit / Stand",
+        "color": "dark_gray",
+        "bold": false,
+        "italic": false
+      },
+      {
+        "text": "  Highlight Dogs",
+        "color": "dark_gray",
+        "bold": false,
+        "italic": false
+      },
+      {
+        "text": "  Auto Target",
+        "color": "dark_gray",
+        "bold": false,
+        "italic": false
+      },
+      {
+        "text": "  Feed Dogs",
+        "color": "dark_gray",
+        "bold": false,
+        "italic": false
+      },
+      {
+        "text": "  Guard Region",
+        "color": "dark_gray",
+        "bold": false,
+        "italic": false
+      },
+      {
+        "text": "  Fetch Items",
+        "color": "dark_gray",
+        "bold": false,
+        "italic": false
+      },
+      {
+        "text": "  Release Orders",
+        "color": "dark_gray",
+        "bold": false,
+        "italic": false
+      },
+      {
+        "text": ""
+      },
+      {
+        "text": "Attacks mobs you pick.",
+        "color": "gray",
+        "italic": false
+      },
+      {
+        "text": "Stays at the position you pick.",
+        "color": "gray",
+        "italic": false
+      },
+      {
+        "text": "Current orders",
+        "color": "white",
+        "bold": true,
+        "italic": false
+      },
+      {
+        "text": "No bound dogs",
+        "color": "aqua",
+        "italic": false
+      },
+      {
+        "text": "0 bound dog(s)",
+        "color": "dark_aqua",
+        "italic": false
+      }
     ]
   };
   const dp=path.join(root,'datapack');

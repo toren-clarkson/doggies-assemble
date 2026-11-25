@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {spawn} from 'node:child_process';
-import {root,base,serverRoot,compile,zip,artifacts} from './build.mjs';
+import {root,base,serverRoot,compile,zip,artifacts,releaseVersion,target} from './build.mjs';
 
-const work=process.env.DOGWAND_TEST_HOME || path.join(root,'.cache/server-1.3.1');fs.mkdirSync(path.join(work,'plugins'),{recursive:true});
+const work=process.env.DOGWAND_TEST_HOME || path.join(root,`.cache/server-${releaseVersion}-${target.minecraft}-${target.server}`);fs.mkdirSync(path.join(work,'plugins'),{recursive:true});
 for(const dir of ['libraries','versions','cache']) {
   const destination=path.join(work,dir);
   if(!fs.existsSync(destination)) fs.cpSync(path.join(serverRoot,dir),destination,{recursive:true});
@@ -47,7 +47,7 @@ for(const phase of [1,2]) {
       await test('order');await test('ordered');await test('arrived',18000);await test('held',4000);await test('returned',4000);
       await test('release');await test('released');await test('attack');await test('attacking');await test('bitten',7000);await test('recall');
       await test('offhand');await test('offhandcheck');await test('sitcancel');await test('sitcancelcheck');await test('occlusion');
-      await test('unloadedcancel');await test('bulk');await test('deathcount');await test('persist');
+      await test('unloadedcancel');await test('bulk');await test('deathcount');await test('bulk_percent');await test('bulk_all_unbind');await test('owner_lock');await test('fetch_on');await test('fetch_oncheck');await test('fetch_offcheck');await test('persist');
     } else await test('restart');
   } finally {
     if(proc.exitCode===null) {

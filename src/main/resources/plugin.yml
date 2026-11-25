@@ -1,5 +1,5 @@
 name: DogWand
-version: 1.4
+version: 1.7
 main: local.dogwand.DogWandPlugin
 api-version: '26.3'
 description: Extensible wand commands for your own tamed wolves.
@@ -7,7 +7,7 @@ author: Hans
 commands:
   dogwand:
     description: Dog Wand help and administration
-    usage: /dogwand [give [player]|reload|mode]
+    usage: /dogwand [give [player]|reload|mode|wands|forget <UUID>]
 permissions:
   dogwand.use:
     default: true

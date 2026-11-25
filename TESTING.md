@@ -1,4 +1,4 @@
-# Dog Wand 1.4 validation
+# Dog Wand 1.7 validation
 
 ## Completed
 
@@ -40,3 +40,21 @@ Two geometry checks resolve real entry footing against a deterministic flat-bloc
 ## 1.4 release
 
 This release changes the resource-pack wand texture and release metadata only. Plugin behavior remains as checked in 1.3.1. Rebuilt the Paper 26.3 plugin, both packs and the development bundle. Release checks verify archive contents, plugin version, JSON validity, and exact texture bytes in the new resource pack. No new gameplay test run is claimed for this visual update.
+
+## 1.5 verification
+
+Standalone suites cover FIFO queues and legacy order upgrades, spaced pack destinations, balanced target distribution, fixed-density visible region edges, persistent binding protection, and the production automatic/guard planner. Fetch tests exercise actual production reservation, pickup, delivery and death methods with real Paper item serialization and deterministic world/event adapters; they cover full custom stack preservation, cancellation, reload, owner and pickup restrictions, exclusive reservations and no delivery loops. Ledger checks use real Paper metadata and exercise owner locks, retirement after silent deletion, recovered retired items, offline/unloaded/opaque storage, nested storage, legacy owner inference, percentage rounding/cancellation and separate selected-mode/current-order lore.
+
+The live fixture is compiled, but the known Windows loopback restriction still prevents an end-to-end server/client run here. Actual native navigation, mouse-release detection and rapid multi-click Shift gestures, creative/drag/shift transfers, forced inventory writes, protection-plugin integrations and multiplayer rendering require an in-game verification. No absolute deletion guarantee is claimed for external plugins with inaccessible private storage.
+
+Final 1.5 result: **180 standalone checks passed across nine suites** (25 pack, 21 fetch/planner, 25 ownership/ledger/lore, 14 control, 8 marker, 13 geometry, 25 private-feedback, 28 feature and 21 guard/binding checks). The expanded native integration fixture compiles; it includes Shift confirmation, percentage/cancel gestures, foreign pickup and cramming-event assertions. The fixture has not run end-to-end here.
+
+## 1.6 verification
+
+A native Minecraft/Paper attribute regression reproduces the supplied duplicate-modifier exception using a negative spawn-style modifier, then verifies repeated enable/disable and base-value changes through the production NavigationRange helper. Updated pack tests cover compact stays, melee approaches for every dog, spherical hitbox selection and the 2.5-block boundary. Production planner checks cover equal simultaneous Point Order assignments and an automatic target for every standing dog. Fetch checks cover discovering fresh drops while armed, idling without turning off and merge-safe delivery-loop prevention. The full bulk mapping covers free percentages, all-dog percentages, Unbind All and cancellation; known empty binding groups persist to invalidate unloaded saved orders. The expanded native fixture includes toggle and bulk actions but has not run end-to-end in this environment.
+
+Final 1.6 result: **205 standalone checks passed across ten suites** (31 pack, 26 fetch/planner, 31 ownership/bulk/lore, 8 native navigation-attribute, 14 control, 8 marker, 13 geometry, 25 private-feedback, 28 feature, and 21 guard/binding checks). The native regression reproduces the precise duplicate-modifier exception in the supplied log. The expanded live fixture compiles, including continuous Fetch toggling and the free/all/Unbind All/cancel binding cycle; no successful end-to-end client/server run is claimed.
+
+## 1.7 rebuild
+
+Rebuilt the current Java sources and both packs with the user's revised in-game text. Preserved the edited recipe lore in the generator and verified that rebuilding retains it. Release validation checks compiled text, version metadata and bundled artifacts. This text update does not add a new gameplay test run.

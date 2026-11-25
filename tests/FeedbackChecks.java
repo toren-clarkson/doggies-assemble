@@ -44,7 +44,7 @@ public final class FeedbackChecks {
         sent.clear();OwnerEffects.beam(viewer,new Vector(5,65,2));check(!sent.isEmpty()&&sent.stream().allMatch(v->v.startsWith("particle:")),"point beam sends only owner particles");
         sent.clear();OwnerEffects.box(viewer,new WandBindings.RegionSelection(worldId,region));check(sent.size()==box.size(),"bounding box sent only to requesting owner");
         sent.clear();OwnerEffects.box(viewer,new WandBindings.RegionSelection(UUID.randomUUID(),region));check(sent.isEmpty(),"preview not shown in wrong dimension");
-        for(String mode:List.of("point_order","sit_stand","highlight","auto_target","feed","guard","release")){sent.clear();OwnerEffects.action(viewer,mode);check(sent.size()==1&&sent.getFirst().startsWith("sound:"),"private activation sound: "+mode);}
+        for(String mode:List.of("point_order","sit_stand","highlight","auto_target","feed","guard","fetch","release")){sent.clear();OwnerEffects.action(viewer,mode);check(sent.size()==1&&sent.getFirst().startsWith("sound:"),"private activation sound: "+mode);}
         Files.delete(file);Files.delete(dir);System.out.println("Feedback checks passed: "+count);
     }
 }

@@ -13,10 +13,10 @@ public final class OwnerEffects {
     public static void box(Player owner,WandBindings.RegionSelection selected){
         if(selected==null||!owner.getWorld().getUID().equals(selected.world()))return;
         var dust=new Particle.DustOptions(Color.fromRGB(65,220,135),.8f);
-        for(Vector p:EffectGeometry.box(selected.region()))owner.spawnParticle(Particle.DUST,p.getX(),p.getY(),p.getZ(),1,0,0,0,0,dust);
+        for(Vector p:EffectGeometry.box(selected.region(),owner.getLocation().toVector(),96))owner.spawnParticle(Particle.DUST,p.getX(),p.getY(),p.getZ(),1,0,0,0,0,dust);
     }
     public static void action(Player owner,String mode){
-        Sound sound=switch(mode){case "point_order"->Sound.ENTITY_ARROW_SHOOT;case "sit_stand"->Sound.BLOCK_NOTE_BLOCK_BASS;case "highlight"->Sound.BLOCK_AMETHYST_BLOCK_CHIME;case "auto_target"->Sound.BLOCK_NOTE_BLOCK_HAT;case "feed"->Sound.ENTITY_GENERIC_EAT;case "guard"->Sound.BLOCK_NOTE_BLOCK_PLING;default->Sound.ENTITY_EXPERIENCE_ORB_PICKUP;};
+        Sound sound=switch(mode){case "point_order"->Sound.ENTITY_ARROW_SHOOT;case "sit_stand"->Sound.BLOCK_NOTE_BLOCK_BASS;case "highlight"->Sound.BLOCK_AMETHYST_BLOCK_CHIME;case "auto_target"->Sound.BLOCK_NOTE_BLOCK_HAT;case "feed"->Sound.ENTITY_GENERIC_EAT;case "guard"->Sound.BLOCK_NOTE_BLOCK_PLING;case "fetch"->Sound.ENTITY_ITEM_PICKUP;default->Sound.ENTITY_EXPERIENCE_ORB_PICKUP;};
         owner.playSound(owner.getLocation(),sound,.35f,mode.equals("release")?1.5f:1.15f);
     }
 }

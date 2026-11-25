@@ -1,4 +1,4 @@
-# Dog Wand 1.4 - Paper 26.3
+# Dog Wand 1.7 - Paper 26.3
 
 Requires Java 25 and Paper 26.3. No client mods.
 
@@ -19,9 +19,9 @@ The first command creates the plugin and both packs. The second creates a full d
 
 ## Upgrade / installation
 
-Stop the server, replace the old JAR in plugins/ and the old crafting ZIP in your world's datapacks/ directory, then start the server. Keep only one installed copy of each. Version 1.4 updates the dog wand texture. Existing 1.3.1 installations only need the new resource pack for this visual change; plugin behavior and crafting remain the same. The rebuilt plugin reports release 1.4.
+Stop the server, replace the old JAR in plugins/ and the old crafting ZIP in your world's datapacks/ directory, then start the server. Keep only one installed copy of each. Version 1.6 adds simultaneous area attack selections, continuous fetch toggling, the extended bulk-binding cycle, denser stays, and a fix for the duplicate navigation modifier exception. Keep the 1.4 artwork; install the new plugin and crafting pack to receive the updated behavior and default help text. Existing wand lore refreshes when used.
 
-Existing 1.1.x, 1.2.x and 1.3.x wands keep their bindings and saved orders. Wands upgrading from before 1.2 start in Point Order until you cycle their per-item mode selection. Wands from 1.0.x have no bindings, and those old owner-wide orders clear on upgrade. Newly crafted wands begin empty. Recipe discoveries remain unlocked. For the 1.3.0 -> 1.3.1 upgrade, replacing only the plugin JAR and restarting is sufficient; the crafting and resource packs have not changed.
+Existing 1.1.x through 1.4 wands keep their bindings and saved orders. Legacy wand ownership comes from known bound-dog ownership, or the first legitimate holder when that information is unavailable. Open or use old stored wands once to index their existing bindings before relying on globally free-dog selection. Wands upgrading from before 1.2 start in Point Order until you cycle their per-item mode selection. Wands from 1.0.x have no bindings, and those old owner-wide orders clear on upgrade. Newly crafted wands begin empty. Recipe discoveries remain unlocked. For the 1.3.0 -> 1.3.1 upgrade, replacing only the plugin JAR and restarting is sufficient; the crafting and resource packs have not changed.
 
 The plugin supplies a fallback recipe when the datapack is absent. The datapack alone cannot control dogs.
 
@@ -44,19 +44,20 @@ If both hands hold a wand, the main-hand wand takes priority for all actions. Cr
 
 ## Controls and mode cycle
 
-Tap and release the sneak key (normally Shift) to advance the selected left-click mode. Holding Shift while right-clicking performs bulk binding and does not also advance the mode. Holding Shift does not repeatedly cycle. The action bar above the hotbar shows a colored, bold mode name and a short description. Each wand remembers its own selected mode. Its lore lists every mode, emphasizes the selected one, wraps its detailed help into short lines, and shows the number of bound dogs. Command feedback replaces that indicator briefly.
+Tap and release the sneak key (normally Shift) to advance the selected left-click mode. Holding Shift while right-clicking previews bulk binding and does not advance the mode. Release the mouse between clicks; release Shift to confirm. Holding Shift does not repeatedly cycle. The action bar above the hotbar shows a colored, bold mode name and a short description. Each wand remembers its own selected mode. Its lore lists every mode, emphasizes the selected one, wraps its detailed help into short lines, and shows the number of bound dogs. Command feedback replaces that indicator briefly.
 
 | Mode, in cycle order | Left-click action |
 | --- | --- |
-| Point Order | First block hit: go and stay. First attackable entity hit: pursue and attack. |
+| Point Order | Add eligible mobs within 2.5 blocks of the ray hit to a shared attack selection. Divide standing dogs evenly across all targets. With no eligible mobs there, clear attacks and compactly spread/stay. |
 | Sit / Stand | If any loaded bound dog stands, sit the group. If all sit, stand the group. Cancel their previous orders. |
 | Highlight Dogs | Show outlines to the owner alone for 200 ticks (10 game seconds). No global potion effect. Includes sitting dogs. |
 | Auto Target | Cycle Off -> Hostile Only -> All Mobs. Standing bound dogs target eligible mobs within a spherical 20-block radius around the owner. Never players; tamed pets are excluded. |
 | Feed Dogs | One click heals damaged bound dogs within a spherical 10-block radius, consuming viable meat from the owner's inventory until full or food runs out. |
 | Guard Region | First click sets corner 1; second sets corner 2. Dogs return inside, roam, and attack hostile mobs inside the box. |
-| Release Orders | Clear orders and command-related aggression for bound dogs; resume normal vanilla AI. Leave sitting dogs sitting. |
+| Fetch Items | Toggle continuous fetching within 20 blocks. One wolf per item entity; return and drop stacks at your feet. Click again to turn it off. |
+| Release Orders | Clear attack selections, fetching, guard duty and auto targeting; resume vanilla AI. Leave sitting dogs sitting. |
 
-Right-click always toggles a dog's binding, regardless of mode. It no longer releases orders. Every left-click mode affects only the held wand's bound dogs that you currently own. Point Order excludes sitting dogs and acts in the owner's current dimension. Sit / Stand, Highlight, and Release consider loaded bound dogs across dimensions. No mode queues movement, posture, or glow for unloaded dogs. Release also invalidates saved orders for unloaded bound dogs, preventing stale orders from resuming when they load.
+Without Shift, right-click toggles a dog's binding, regardless of mode. It no longer releases orders. Every left-click mode affects only the held wand's bound dogs that you currently own. Point Order excludes sitting dogs and acts in the owner's current dimension. Sit / Stand, Highlight, and Release consider loaded bound dogs across dimensions. No mode queues movement, posture, or glow for unloaded dogs. Release also invalidates saved orders for unloaded bound dogs, preventing stale orders from resuming when they load.
 
 While holding a wand, mouse clicks belong to the wand, even if the other hand holds a tool. Put the wand away to feed a dog or interact with it normally. Mode selection now belongs to each wand item, rather than to the player. Existing bindings remain; old player-wide mode choices are not migrated, so existing wands initially select Point Order.
 
@@ -64,11 +65,11 @@ While holding a wand, mouse clicks belong to the wand, even if the other hand ho
 
 Point Order uses actual block collision shapes and entity hitboxes, choosing the nearer hit. Unattackable entities obstruct selection rather than allowing selection through them. A miss leaves orders unchanged. The ray ignores fluids, stops at unloaded chunks, and has no fixed gameplay range cap within the loaded area. It never force-loads chunks.
 
-Dogs use native navigation with intermediate waypoints. During an order, separate movement and targeting goals suppress vanilla owner-following and competing target selection. A temporary navigation-range modifier supports the staged path requests and is removed on release, unload, or plugin shutdown. Automatic owner teleports cannot complete while an order is active. The teleport-event guard also blocks administrative/plugin teleports during that period; release the order first if you need to teleport a dog deliberately.
+Dogs use native navigation with intermediate waypoints. During an active movement or combat task, separate movement and targeting goals suppress vanilla owner-following and competing target selection. Armed auto attack with no targets, and spare fetch dogs, use normal vanilla AI. A temporary navigation-range modifier supports the staged path requests and is removed on release, unload, or plugin shutdown. Automatic owner teleports cannot complete while a movement/combat task is active. Idle auto attack and idle fetch dogs can follow and teleport normally. The teleport-event guard also blocks administrative/plugin teleports during that period; release the order first if you need to teleport a dog deliberately.
 
 Terrain, closed doors, blocked paths, and non-ticking or unloaded chunks can still prevent arrival. Dogs do not teleport to destinations or simulate outside ticking chunks. An unreachable stay order persists with throttled retries. Release or replace it to cancel.
 
-Dogs stay standing near their destination, return after displacement, and do not follow the owner while commanded. Manual sitting cancels a dog's order. If a Point Order attack target dies, unloads, changes dimension, or becomes invalid, the dog returns to normal AI. Auto Target and Guard Region instead look for another eligible target. After release, normal owner-following and vanilla teleporting resume.
+Dogs stay standing near their destination, return after displacement, and do not follow the owner while commanded. Manual sitting cancels a dog's order. When a selected Point Order target dies, unloads, changes dimension, or becomes invalid, it leaves the selection and the pack redistributes across the remaining targets. Normal AI resumes when the selection empties. Auto Target and Guard Region instead look for another eligible target. After release, normal owner-following and vanilla teleporting resume.
 
 The owner, their own tamed animals, armor stands, invulnerable entities, and creative/spectator players cannot serve as attack targets. Player targeting checks world PvP and the owner's scoreboard-team friendly-fire setting. Bites use native damage events so protection plugins can cancel them; plugin-specific pet rules may need integration.
 
@@ -106,7 +107,7 @@ See TESTING.md for verification and remaining runtime checks.
 
 ## New mode details
 
-Auto Target replaces the group's previous movement orders. Off and Release restore vanilla AI. With no eligible target, dogs walk toward the owner without teleporting. The radius follows the owner. Hostile means Minecraft's Enemy classification, which includes some neutral monster types. All Mobs adds passive mobs such as animals and villagers; neither setting attacks players or any tamed pet. Sitting dogs remain sitting. Changing the selected mode alone does not stop an active order; use Off, Release, Sit/Stand, Point Order, or a new Guard order to replace it.
+Auto Target replaces the group's previous movement orders. Off and Release restore vanilla AI. With no eligible target, the custom AI goals deactivate: dogs use ordinary owner-following and vanilla teleporting while auto attack remains armed. The radius follows the owner. Hostile means Minecraft's Enemy classification, which includes some neutral monster types. All Mobs adds passive mobs such as animals and villagers; neither setting attacks players or any tamed pet. Sitting dogs remain sitting. Changing the selected mode alone does not stop an active order; use Off, Release, Sit/Stand, Point Order, or a new Guard order to replace it.
 
 Feed Dogs is a one-shot batch, not a continuous toggle. It uses the server's wolf-food eligibility and item nutrition, does not breed dogs or grow puppies, and consumes one portion for each successful heal, even in Creative mode. Healthy or distant dogs cost no meat. A cancelled heal costs no meat. Normal inventory slots and the offhand can supply food. It leaves movement orders and posture unchanged.
 
@@ -118,7 +119,7 @@ Private highlights go only to the current owner's network connection and only fo
 
 All new wand particles and activation sounds go only through the owner's Player connection. Successful feeding adds a small heart burst above each healed dog. Valid point orders draw a brief spark beam from the eye to the ray hit, with a hit marker. Selecting Guard Region while holding the wand shows the saved box outline every half second, only in its dimension. Particle budgets remain bounded for huge regions or long rays. Each of the seven left-click modes plays a simple private activation sound; selecting a mode also retains its private UI click. These additions do not mute ordinary vanilla mob sounds.
 
-Shift-right-click adds ALL your loaded or previously indexed tamed dogs to the current wand, across dimensions, including sitting dogs. It is additive, so it never removes an existing binding. No chunks force-load. A dog that has always remained in an unloaded chunk and has never been observed by this plugin cannot be discovered until that chunk loads once. The known ownership index persists across restarts and updates when loaded dogs change owner.
+Shift-right-click now previews a percentage of your globally unbound, loaded or previously indexed tamed dogs, across dimensions and including sitting dogs. Only releasing Shift commits the selection; it never removes existing bindings. No chunks force-load. Dogs never observed by this plugin become available after their chunks first load.
 
 A persistent death registry cleans binding UUID lists without confusing unloaded dogs with dead dogs. Already-dead dogs from before the plugin observed their death cannot be identified safely from a missing entity alone. Registry files live in plugins/DogWand/known-dogs.yml.
 
@@ -131,3 +132,46 @@ Guard path validation now converts Paper's raw block-corner nodes to the dog's m
 Assigning a region starts an entry phase for each standing dog outside or touching the edge. Dogs aim at walkable footing inside the box and continue until their whole body clears the border with a small margin. The usual Point Order arrival radius cannot end this phase early. Once inside, boundary crossings clip only the outward part of movement, allowing inward movement and sliding along an edge instead of cancelling the entire step. Small final entry steps use ordinary physical movement and collisions; dogs do not teleport into the box.
 
 Binding lists and their lore counts now update in the same item metadata write. Binding, bulk binding, unbinding, and observed deaths refresh the stored count. Periodic/use-time cleanup also repairs a stale count even when the UUID list was already correct. The active wand's full tooltip reads the latest item after selection and state cleanup, and binding/death events resend inventory state on the next tick. Existing stale count rows repair automatically when the wand is held or its inventory opens. Unloaded dogs still count until the plugin observes their death.
+
+## Orders and pack behavior (1.6)
+
+Point Order adds all eligible mobs whose hitboxes touch the 2.5-block sphere around the ray hit. Repeated selections union with the existing target set for this wand; duplicates do not add extra weight. The whole loaded standing pack receives the same selected set, then splits evenly across all available targets at once. Target group sizes differ by at most one. A no-mob point or Release clears the selection. Selected IDs persist on each dog, including reading legacy saved queues as simultaneous selections. Area selection does not include players; a direct player click still follows the existing PvP rules. Dogs shared with another wand obey the most recently issued order.
+
+Block orders use distinct walkable destinations roughly 1.4 blocks apart inside a radius that grows with the bound pack size. If terrain leaves insufficient safe positions, remaining dogs resume normal AI rather than converge on one occupied block. Auto attack and guard duty assign dogs to the least-occupied eligible mobs before considering travel distance. Every allocated dog approaches and attacks its target; there is no eight-dog front-line limit or inactive reserve group. Sitting dogs and dogs whose chunks are not ticking remain excluded. Bound or actively commanded tamed wolves have cramming damage cancelled; the world gamerule and other damage causes stay unchanged.
+
+Fetch Items toggles ON/OFF. While ON, it scans the owner's current spherical 20-block radius every half second and assigns each available item entity to exactly one standing loaded dog, across simultaneous wand groups. Spare dogs use native AI while waiting. Dogs pick up the entire current stack, return, and drop it at the owner's feet, then accept new items automatically. Completed deliveries carry an entity-only marker so dogs do not fetch the same drop repeatedly; merging preserves that marker. Picking up and dropping an item again creates a new fetchable entity. Ownership, mob-pickup restrictions, pickup delays and cancellable events still apply. Custom item data and counts persist on the wolf through unload/restart. OFF, Release, Unbind All from the issuing wand, or a replacement movement command stops fetching and drops any carried items safely near the dog. Offline or different-dimension owners pause delivery. Unreachable or denied items receive a retry delay; no chunks force-load.
+
+Region outlines keep a fixed spacing of one particle per block. Only edge points within 96 blocks of the owner are transmitted, so large boxes retain visible density without sending millions of distant particles. Effects and sounds remain private to the owner.
+
+### Confirmed bulk binding
+
+Hold Shift, right-click and release the mouse for each selection step, then release Shift to confirm:
+
+| Right clicks while Shift stays held | Free dogs to bind |
+| --- | --- |
+| 1-5 | 100 / 80 / 60 / 40 / 20% of your globally unbound dogs |
+| 6-10 | 100 / 80 / 60 / 40 / 20% of all your known tamed dogs |
+| 11 | Unbind all dogs from this wand |
+| 12 or more | Cancel |
+
+Free means your known tamed dogs with no registered binding to any wand. All includes your dogs that already belong to this or other wands. Percentages apply to that pool when Shift is released, round up for fractional dogs, and select randomly. Both percentage scopes add bindings and keep existing bindings; the confirmation reports how many were newly added. Unbind All clears only this wand's bindings and orders, and invalidates its saved orders on unloaded dogs while preserving other wands' bindings. Normal right-click can still bind a dog to multiple wands intentionally. Switching the selected wand cancels the pending bulk operation. Tapping Shift without any right-click still cycles modes. The action bar previews the percentage throughout the selection.
+
+### Owner locks and deletion
+
+New wands gain a persistent owner and item ID when crafted, given, or first legitimately claimed. Other players cannot pick them up or take them from storage, including containers holding nested wands. Inventory clicks, drags, creative transfers and armor-stand exchanges enforce the lock. Direct plugin writes into online player inventories are reconciled every second; foreign items are dropped with their original ownership intact. Only owners can use a wand. Crafting multiple wands produces separate IDs.
+
+The durable ledger at plugins/DogWand/wands.yml tracks known wands alongside the binding index. A five-second census scans online player inventories, ender chests and cursors, open inventories, loaded block storage, item entities, storage entities, displayed/equipped items, nested bundles/shulker storage, and fetched cargo. Normal destruction, despawning, creative deletion, inventory clears, and silent removal from inspectable known locations retire missing wands after a five-second absence grace. Their dogs become free again, and orders issued by the retired wand clear. A recovered retired item becomes a new empty wand with its original owner.
+
+No server plugin can reliably distinguish an arbitrary external plugin's hidden storage from deletion without that plugin's cooperation. Offline inventories, unloaded chunks, and opaque virtual storage therefore retain bindings. Deletions there reconcile when the location becomes inspectable; they are not guessed from absence. Use /dogwand wands to list your live registered IDs and /dogwand forget <UUID> to retire a genuinely missing wand explicitly. If the item later returns, its old bindings remain retired. Never delete registry files to clean up a wand.
+
+### Current-order lore
+
+The selected mode still determines the next left-click action. A separate **Current orders** section reports what the bound dogs actually do now: go/stay, simultaneous attack selections, guarding, auto attack or idle follow, fetching/returning, ordinary follow, sitting, and mixed orders. It includes orders issued by another wand to shared dogs. Unloaded dogs show as unloaded/unknown rather than falsely reporting that they have released their orders.
+
+## 1.6 movement error fix
+
+The supplied Paper 26.3 log showed repeated `Modifier is already applied on this attribute!` errors in `DogCommands.navigationRange`, interrupting the group planner. A native negative spawn-style range modifier can leave the effective range below 48 even after the plugin modifier exists. Navigation updates now check the modifier key before adding it, making repeated updates idempotent and preserving other modifiers. Short physical finishing steps also help dogs whose native path ended just outside their stay or attack position.
+
+## 1.7 text update
+
+Updates in-game mode descriptions, action-bar messages and the crafting recipe's default lore. Gameplay behavior remains the same as 1.6.

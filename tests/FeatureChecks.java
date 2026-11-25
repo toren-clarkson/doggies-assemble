@@ -41,7 +41,7 @@ public final class FeatureChecks {
         String old="2|"+owner+"|2|STAY|"+world+"|1.0|62.0|4.0|-";
         check(DogCommands.Order.decode(old).kind()==DogCommands.Kind.STAY,"1.1.0 saved orders remain readable");
         var modes=new ModeRegistry(new NamespacedKey("dogwand","mode"));
-        for(String id:List.of("point_order","sit_stand","highlight","auto_target","feed","guard"))modes.register(mode(id,id));modes.registerLast(mode("release","Release Orders"));
+        for(String id:List.of("point_order","sit_stand","highlight","auto_target","feed","guard","fetch"))modes.register(mode(id,id));modes.registerLast(mode("release","Release Orders"));
         var first=new CraftPersistentDataContainer(new CraftPersistentDataTypeRegistry());var second=new CraftPersistentDataContainer(new CraftPersistentDataTypeRegistry());
         modes.cycle(first);check(modes.current(first).id().equals("sit_stand")&&modes.current(second).id().equals("point_order"),"different item containers remember independent modes");
         var restored=new CraftPersistentDataContainer(first.getRaw(),new CraftPersistentDataTypeRegistry());check(modes.current(restored).id().equals("sit_stand"),"selected item mode persists through serialization");

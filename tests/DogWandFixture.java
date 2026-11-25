@@ -203,13 +203,32 @@ public final class DogWandFixture extends JavaPlugin {
                 }
                 case "bulk" -> {
                     Wolf extra=wolf(a,5.5,5.5,false);deceased=extra.getUniqueId();String mode=plugin.modes().current(a).id();
-                    a.setSneaking(true);Bukkit.getPluginManager().callEvent(new PlayerToggleSneakEvent(a,true));right();a.setSneaking(false);Bukkit.getPluginManager().callEvent(new PlayerToggleSneakEvent(a,false));
+                    a.setSneaking(true);Bukkit.getPluginManager().callEvent(new PlayerToggleSneakEvent(a,true));right();check(!plugin.bindings().selection(a).dogs().contains(deceased),"Bulk binding committed before Shift release");Bukkit.getPluginManager().callEvent(new io.papermc.paper.event.player.PlayerStopUsingItemEvent(a,plugin.activeWand(a),1));a.setSneaking(false);Bukkit.getPluginManager().callEvent(new PlayerToggleSneakEvent(a,false));
                     check(plugin.modes().current(a).id().equals(mode),"Bulk chord unexpectedly cycled mode");
                     check(plugin.bindings().selection(a).dogs().contains(deceased),"Shift-right did not bind known owned dog");
                     check(!plugin.bindings().selection(a).dogs().contains(foreign.getUniqueId()),"Bulk binding included foreign dog");
                     beforeDeath=plugin.bindings().selection(a).dogs().size();extra.setHealth(0);
                 }
                 case "deathcount" -> {checkLoreCount(beforeDeath-1);var ids=plugin.bindings().selection(a).dogs();check(ids.size()==beforeDeath-1&&!ids.contains(deceased),"Dead dog remained in binding count");}
+                case "bulk_percent" -> {
+                    for(int i=0;i<5;i++)wolf(a,6+i*.1,6,false);int before=plugin.bindings().selection(a).dogs().size();int free=(int)plugin.bindings().registry().owned(a.getUniqueId()).stream().filter(id->!plugin.bindings().registry().bound(id)).count();
+                    a.setSneaking(true);Bukkit.getPluginManager().callEvent(new PlayerToggleSneakEvent(a,true));
+                    for(int i=0;i<2;i++){right();Bukkit.getPluginManager().callEvent(new io.papermc.paper.event.player.PlayerStopUsingItemEvent(a,plugin.activeWand(a),1));}
+                    check(plugin.bindings().selection(a).dogs().size()==before,"Percentage selection committed early");a.setSneaking(false);Bukkit.getPluginManager().callEvent(new PlayerToggleSneakEvent(a,false));check(plugin.bindings().selection(a).dogs().size()==before+(int)Math.ceil(free*.8),"Two-click selection did not bind eighty percent of free dogs");
+                    before=plugin.bindings().selection(a).dogs().size();a.setSneaking(true);Bukkit.getPluginManager().callEvent(new PlayerToggleSneakEvent(a,true));for(int i=0;i<12;i++){right();Bukkit.getPluginManager().callEvent(new io.papermc.paper.event.player.PlayerStopUsingItemEvent(a,plugin.activeWand(a),1));}a.setSneaking(false);Bukkit.getPluginManager().callEvent(new PlayerToggleSneakEvent(a,false));check(plugin.bindings().selection(a).dogs().size()==before,"Twelve-click cancellation changed bindings");
+                }
+                case "bulk_all_unbind" -> {
+                    a.setSneaking(true);Bukkit.getPluginManager().callEvent(new PlayerToggleSneakEvent(a,true));for(int i=0;i<6;i++){right();Bukkit.getPluginManager().callEvent(new io.papermc.paper.event.player.PlayerStopUsingItemEvent(a,plugin.activeWand(a),1));}a.setSneaking(false);Bukkit.getPluginManager().callEvent(new PlayerToggleSneakEvent(a,false));
+                    check(plugin.bindings().selection(a).dogs().equals(plugin.bindings().registry().owned(a.getUniqueId())),"Six-click selection did not include all owned dogs, including bound dogs");
+                    a.setSneaking(true);Bukkit.getPluginManager().callEvent(new PlayerToggleSneakEvent(a,true));for(int i=0;i<11;i++){right();Bukkit.getPluginManager().callEvent(new io.papermc.paper.event.player.PlayerStopUsingItemEvent(a,plugin.activeWand(a),1));}a.setSneaking(false);Bukkit.getPluginManager().callEvent(new PlayerToggleSneakEvent(a,false));check(plugin.bindings().selection(a).dogs().isEmpty(),"Eleven-click Unbind All retained bindings");plugin.bindings().bind(a,dog);
+                }
+                case "fetch_on" -> {selectMode("fetch");left();}
+                case "fetch_oncheck" -> {check(plugin.bindings().fetchEnabled(a)&&plugin.dogCommands().order(dog).kind()==DogCommands.Kind.FETCH,"Fetch did not arm with no items");left();}
+                case "fetch_offcheck" -> {check(!plugin.bindings().fetchEnabled(a)&&plugin.dogCommands().order(dog)==null,"Fetch OFF retained an order");selectMode("point_order");}
+                case "owner_lock" -> {
+                    ItemStack copy=plugin.activeWand(a).clone();var item=world.dropItem(a.getLocation(),copy);var event=new EntityPickupItemEvent(b,item,0);Bukkit.getPluginManager().callEvent(event);check(event.isCancelled(),"Other player could pick up owned wand");item.remove();
+                    var damage=EntityDamageEvent.class.getConstructor(Entity.class,EntityDamageEvent.DamageCause.class,double.class).newInstance(dog,EntityDamageEvent.DamageCause.CRAMMING,6.0);Bukkit.getPluginManager().callEvent(damage);check(damage.isCancelled(),"Bound dog lacks cramming protection");
+                }
                 case "persist" -> {
                     a.getInventory().setItemInMainHand(plugin.createWand());a.getInventory().setItemInOffHand(null);
                     plugin.bindings().bind(a,dog);dog.setSitting(false);plugin.dogCommands().point(a);check(plugin.dogCommands().order(dog)!=null,"No order to persist");

@@ -24,6 +24,9 @@ public final class DogWandPlugin extends JavaPlugin implements Listener {
     private WandBindings bindings;
     private final Map<UUID,Integer> lastLeft=new HashMap<>(),lastRight=new HashMap<>(),lastRelease=new HashMap<>(),pendingSwing=new HashMap<>();
     private final Set<UUID> sneaking=new HashSet<>(),bulkChord=new HashSet<>();
+    private static final class PendingBinding {final UUID wand;int clicks;boolean pressed;PendingBinding(UUID wand){this.wand=wand;}}
+    private final Map<UUID,PendingBinding> pendingBindings=new HashMap<>();
+    private final Set<UUID> finishingBulkClick=new HashSet<>();
     private final Map<UUID,Integer> feedbackUntil=new HashMap<>();
     public DogCommands dogCommands() {return commands;}
     public ModeRegistry modes() {return modes;}
@@ -38,22 +41,26 @@ public final class DogWandPlugin extends JavaPlugin implements Listener {
         modes.register(new WandMode() {
             public String id() {return "point_order";}
             public String name() {return "Point Order";}
-            public String description(){return "Point at a block to stay, or a mob to attack.";}
+            public String description(){return "Point and click at a location. Mobs at the location gets attacked. If non, then the dogs stay there.";}
             public void leftClick(Player player) {commands.point(player);}
         });
-        modes.register(mode("sit_stand","Sit / Stand","Sit the group, or stand them if all sit.",commands::sitStand));
-        modes.register(mode("highlight","Highlight Dogs","Show your dogs only to you for 10 seconds.",commands::highlight));
-        modes.register(mode("auto_target","Auto Target","Cycle Off / Hostile Only / All Mobs within 20 blocks.",commands::toggleAuto));
-        modes.register(mode("feed","Feed Dogs","Heal dogs within 10 blocks using inventory meat.",commands::feed));
-        modes.register(mode("guard","Guard Region","Set two corners. Roam inside; defend against hostile mobs.",commands::guard));
-        modes.registerLast(mode("release","Release Orders","Clear orders, guard duty and automatic targeting.",commands::release));
+        modes.register(mode("sit_stand","Sit / Stand","Toggles sit/stand for dogs bound.",commands::sitStand));
+        modes.register(mode("highlight","Highlight Dogs","Glows bound dogs for 10 seconds.",commands::highlight));
+        modes.register(mode("auto_target","Auto Target","Cycle between: Off / Hostile Only / All Mobs within 20 blocks.",commands::toggleAuto));
+        modes.register(mode("feed","Feed Dogs","Heal dogs within 10 blocks using meat in your inventory.",commands::feed));
+        modes.register(mode("guard","Guard Region","Set two corners to select a region bound dogs defend against hostile mobs.",commands::guard));
+        modes.register(mode("fetch","Fetch Items","Toggle item fetching within 20 blocks. Return items to your feet.",commands::fetch));
+        modes.registerLast(mode("release","Release Orders","Clear any orders, return to normal behavior.",commands::release));
         var meta=wand.getItemMeta();meta.lore(WandText.lore(modes,modes.all().getFirst(),modes.all().getFirst().description(),0));
         meta.itemName(Component.text("Dog Wand",NamedTextColor.GOLD).decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));wand.setItemMeta(meta);
         Bukkit.getPluginManager().registerEvents(this,this);
+        Bukkit.getPluginManager().registerEvents(new WandSecurity(this),this);
         // Datapack supplies the recipe. A fallback also supports plugin + resource pack installs.
         installRecipe();
         for(World world:Bukkit.getWorlds()) for(Wolf wolf:world.getEntitiesByClass(Wolf.class)) commands.track(wolf);
-        for(Player player:Bukkit.getOnlinePlayers()) {discoverFromInventory(player);if(player.isSneaking()) sneaking.add(player.getUniqueId());}
+        for(Player player:Bukkit.getOnlinePlayers()) {bindings.ledger().player(player,true);bindings.pruneInventory(player.getInventory());discoverFromInventory(player);if(player.isSneaking()) sneaking.add(player.getUniqueId());}
+        Bukkit.getScheduler().runTaskTimer(this,()->bindings.ledger().audit(),1,100);
+        Bukkit.getScheduler().runTaskTimer(this,()->{for(Player p:Bukkit.getOnlinePlayers())bindings.ledger().player(p,true);},1,20);
         Bukkit.getScheduler().runTaskTimer(this,commands::maintain,1,1);
         Bukkit.getScheduler().runTaskTimer(this,()-> {
             int now=Bukkit.getCurrentTick();
@@ -69,14 +76,14 @@ public final class DogWandPlugin extends JavaPlugin implements Listener {
         ShapedRecipe recipe=new ShapedRecipe(recipeKey,wand.clone());recipe.shape("BBB","BSB","BBB");
         recipe.setIngredient('B',Material.BONE);recipe.setIngredient('S',Material.STICK);Bukkit.addRecipe(recipe);
     }
-    @Override public void onDisable() {if(commands!=null) commands.stop();if(bindings!=null)bindings.flush();}
+    @Override public void onDisable() {if(commands!=null) commands.stop();if(bindings!=null){bindings.flush();bindings.ledger().flush();}}
     public ItemStack createWand() {return wand.clone();}
     public boolean isWand(ItemStack item) {
         return item!=null && item.getType()==Material.STICK && item.hasItemMeta()
                 && WandIdentity.matches(item.getItemMeta().getPersistentDataContainer(),wandKey);
     }
     public boolean holding(Player player) {return isWand(player.getInventory().getItemInMainHand()) || isWand(player.getInventory().getItemInOffHand());}
-    private boolean usable(Player player) {return player.hasPermission("dogwand.use") && player.getGameMode()!=GameMode.SPECTATOR && holding(player);}
+    private boolean usable(Player player) {return player.hasPermission("dogwand.use") && player.getGameMode()!=GameMode.SPECTATOR && holding(player)&&bindings.ledger().owns(player,activeWand(player));}
     public void feedback(Player player,String message) {
         if(getConfig().getBoolean("feedback",true)) {
             NamedTextColor tone=message.startsWith("No ")||message.startsWith("Could not")||message.startsWith("The box")||message.startsWith("Both ")||message.startsWith("Private ")?NamedTextColor.RED:message.startsWith("Unbound")||message.startsWith("Released")?NamedTextColor.YELLOW:NamedTextColor.GREEN;
@@ -85,6 +92,7 @@ public final class DogWandPlugin extends JavaPlugin implements Listener {
         }
     }
     private void showMode(Player player) {
+        var pending=pendingBindings.get(player.getUniqueId());if(pending!=null){bulkPreview(player,pending);WandText.refresh(this,player);return;}
         var wand=bindings.selection(player);
         var mode=modes.current(player);
         player.sendActionBar(Component.text(mode.name(),WandText.color(mode.id())).decorate(net.kyori.adventure.text.format.TextDecoration.BOLD).append(Component.text(" | "+commands.hint(player,mode),NamedTextColor.GRAY).decoration(net.kyori.adventure.text.format.TextDecoration.BOLD,false)));
@@ -106,22 +114,31 @@ public final class DogWandPlugin extends JavaPlugin implements Listener {
         var mode=modes.current(player);mode.leftClick(player);OwnerEffects.action(player,mode.id());WandText.refresh(this,player);
     }
     private void refreshAfterEvent(Player player){Bukkit.getScheduler().runTask(this,()->{if(player.isOnline()){bindings.pruneInventory(player.getInventory());if(holding(player))WandText.refresh(this,player);player.updateInventory();}});}
+    private void bulkPreview(Player player,PendingBinding pending){feedback(player,"Bulk bind: "+BulkSelection.choice(pending.clicks).label()+" | Release Shift to confirm");}
     private void right(Player player,Entity directTarget) {
         if(!usable(player)) return;
         pendingSwing.remove(player.getUniqueId());
         int tick=Bukkit.getCurrentTick();
+        if(player.isSneaking()||sneaking.contains(player.getUniqueId())){
+            lastRight.put(player.getUniqueId(),tick);bulkChord.add(player.getUniqueId());var selected=bindings.selection(player);if(selected==null)return;
+            var pending=pendingBindings.computeIfAbsent(player.getUniqueId(),id->new PendingBinding(selected.id()));
+            if(!pending.wand.equals(selected.id())){feedback(player,"Bulk bind cancelled: keep the same wand selected.");pending.clicks=12;return;}
+            if(pending.pressed)return;pending.pressed=true;pending.clicks++;bulkPreview(player,pending);
+            Bukkit.getScheduler().runTask(this,()->{if(player.isOnline()&&pendingBindings.get(player.getUniqueId())==pending&&pending.pressed)player.startUsingItem(selected.hand());});return;
+        }
+        if(finishingBulkClick.contains(player.getUniqueId())){lastRight.put(player.getUniqueId(),tick);if(!player.hasActiveItem())finishingBulkClick.remove(player.getUniqueId());return;}
         Integer previousRight=lastRight.put(player.getUniqueId(),tick);
         // Held Use repeats every few ticks. Require an idle gap so a hold cannot bind/unbind repeatedly.
         if(previousRight!=null && tick-previousRight<6)return;
         if(cooldown(lastRelease,player,tick)) return;
-        if(player.isSneaking()||sneaking.contains(player.getUniqueId())){bulkChord.add(player.getUniqueId());bindings.bindAll(player);}else bindings.bind(player,directTarget);WandText.refresh(this,player);refreshAfterEvent(player);
+        bindings.bind(player,directTarget);WandText.refresh(this,player);refreshAfterEvent(player);
     }
     @EventHandler(priority=EventPriority.HIGHEST)
     public void interact(PlayerInteractEvent event) {
         Player player=event.getPlayer();if(!usable(player)) return;
         switch(event.getAction()) {
             case RIGHT_CLICK_AIR,RIGHT_CLICK_BLOCK -> {
-                event.setUseInteractedBlock(Event.Result.DENY);event.setUseItemInHand(Event.Result.DENY);right(player,null);
+                event.setUseInteractedBlock(Event.Result.DENY);event.setUseItemInHand(player.isSneaking()||sneaking.contains(player.getUniqueId())?Event.Result.ALLOW:Event.Result.DENY);right(player,null);
             }
             case LEFT_CLICK_AIR,LEFT_CLICK_BLOCK -> {
                 event.setUseInteractedBlock(Event.Result.DENY);event.setUseItemInHand(Event.Result.DENY);queueLeft(player);
@@ -150,9 +167,11 @@ public final class DogWandPlugin extends JavaPlugin implements Listener {
     }
     @EventHandler(priority=EventPriority.HIGHEST)
     public void interactAtEntity(PlayerInteractAtEntityEvent event) {interactEntity(event);}
+    @EventHandler public void stopUsing(io.papermc.paper.event.player.PlayerStopUsingItemEvent event){if(isWand(event.getItem())){finishingBulkClick.remove(event.getPlayer().getUniqueId());var pending=pendingBindings.get(event.getPlayer().getUniqueId());if(pending!=null&&pending.wand.equals(bindings.ledger().id(event.getItem())))pending.pressed=false;}}
+    @EventHandler(priority=EventPriority.HIGHEST,ignoreCancelled=true) public void consume(PlayerItemConsumeEvent event){if(isWand(event.getItem()))event.setCancelled(true);}
     @EventHandler(priority=EventPriority.HIGHEST,ignoreCancelled=true)
     public void teleport(EntityTeleportEvent event) {
-        if(event.getEntity() instanceof Wolf wolf && commands.order(wolf)!=null) event.setCancelled(true);
+        if(event.getEntity() instanceof Wolf wolf && commands.controlling(wolf)) event.setCancelled(true);
     }
     @EventHandler(priority=EventPriority.HIGHEST,ignoreCancelled=true)
     public void move(io.papermc.paper.event.entity.EntityMoveEvent event){if(event.getEntity() instanceof Wolf wolf){var desired=event.getTo();var clipped=commands.constrainMove(wolf,event.getFrom(),desired);if(!clipped.equals(desired)){event.setTo(clipped);var v=wolf.getVelocity();if(clipped.getX()!=desired.getX())v.setX(0);if(clipped.getZ()!=desired.getZ())v.setZ(0);wolf.setVelocity(v);}}}
@@ -169,7 +188,9 @@ public final class DogWandPlugin extends JavaPlugin implements Listener {
         UUID id=event.getPlayer().getUniqueId();
         if(event.isSneaking()){sneaking.add(id);return;}
         boolean wasSneaking=sneaking.remove(id),usedBulk=bulkChord.remove(id);
-        if(!wasSneaking||usedBulk||!usable(event.getPlayer()))return;
+        if(usedBulk){var pending=pendingBindings.remove(id);Player player=event.getPlayer();if(pending!=null&&pending.pressed)finishingBulkClick.add(id);else player.clearActiveItem();
+            if(pending!=null&&usable(player)){var selected=bindings.selection(player);if(selected!=null&&selected.id().equals(pending.wand))bindings.confirmBulk(player,pending.clicks);else feedback(player,"Bulk binding cancelled: selected wand changed.");WandText.refresh(this,player);refreshAfterEvent(player);}return;}
+        if(!wasSneaking||!usable(event.getPlayer()))return;
         WandMode mode=modes.cycle(event.getPlayer());
         showMode(event.getPlayer());
         feedbackUntil.remove(id);
@@ -184,7 +205,7 @@ public final class DogWandPlugin extends JavaPlugin implements Listener {
             Bukkit.getScheduler().runTask(this,()->{if(player.isOnline()) discoverFromInventory(player);});
     }
     @EventHandler public void quit(PlayerQuitEvent event) {
-        UUID id=event.getPlayer().getUniqueId();lastLeft.remove(id);lastRight.remove(id);lastRelease.remove(id);pendingSwing.remove(id);sneaking.remove(id);bulkChord.remove(id);feedbackUntil.remove(id);
+        UUID id=event.getPlayer().getUniqueId();lastLeft.remove(id);lastRight.remove(id);lastRelease.remove(id);pendingSwing.remove(id);sneaking.remove(id);bulkChord.remove(id);pendingBindings.remove(id);finishingBulkClick.remove(id);feedbackUntil.remove(id);
     }
     @EventHandler public void load(EntitiesLoadEvent event) {for(Entity entity:event.getEntities()) if(entity instanceof Wolf wolf) commands.track(wolf);}
     @EventHandler public void unload(EntitiesUnloadEvent event) {for(Entity entity:event.getEntities()) if(entity instanceof Wolf wolf) commands.untrack(wolf);}
@@ -192,21 +213,26 @@ public final class DogWandPlugin extends JavaPlugin implements Listener {
     public void spawn(CreatureSpawnEvent event) {if(event.getEntity() instanceof Wolf wolf) Bukkit.getScheduler().runTask(this,()->{if(wolf.isValid())commands.track(wolf);});}
     @EventHandler(priority=EventPriority.MONITOR,ignoreCancelled=true)
     public void tame(EntityTameEvent event) {if(event.getEntity() instanceof Wolf wolf) Bukkit.getScheduler().runTask(this,()->commands.track(wolf));}
-    @EventHandler public void death(EntityDeathEvent event) {if(event.getEntity() instanceof Wolf wolf){bindings.died(wolf);commands.untrack(wolf);for(Player player:Bukkit.getOnlinePlayers()){if(usable(player))showMode(player);refreshAfterEvent(player);}}}
+    @EventHandler(priority=EventPriority.MONITOR,ignoreCancelled=true) public void death(EntityDeathEvent event) {if(event.getEntity() instanceof Wolf wolf){commands.died(wolf,event.getDrops());bindings.died(wolf);commands.untrack(wolf);for(Player player:Bukkit.getOnlinePlayers()){if(usable(player))showMode(player);refreshAfterEvent(player);}}}
+    @EventHandler(priority=EventPriority.HIGHEST,ignoreCancelled=true)
+    public void cramming(EntityDamageEvent event){if(event.getCause()==EntityDamageEvent.DamageCause.CRAMMING&&event.getEntity() instanceof Wolf wolf&&wolf.isTamed()&&(commands.order(wolf)!=null||bindings.registry().bound(wolf.getUniqueId())))event.setCancelled(true);}
     @EventHandler(priority=EventPriority.HIGHEST,ignoreCancelled=true)
     public void target(EntityTargetLivingEntityEvent event) {
         if(!(event.getEntity() instanceof Wolf wolf)) return;
         DogCommands.Order order=commands.order(wolf);if(order==null || event.getTarget()==null) return;
         if(wolf.isSitting() || !commands.allowedTarget(wolf,event.getTarget())) event.setCancelled(true);
     }
+    @EventHandler(priority=EventPriority.MONITOR,ignoreCancelled=true) public void merge(ItemMergeEvent event){FetchOrders.preserveDelivery(event.getEntity(),event.getTarget());}
     @Override public boolean onCommand(CommandSender sender,Command command,String label,String[] args) {
-        if(args.length==0) {sender.sendMessage("Dog Wand: right click your dog to bind/unbind; Shift+right binds all; tap Shift to cycle; left click uses the mode. Main-hand wand takes priority.");return true;}
+        if(args.length==0) {sender.sendMessage("Dog Wand: right click your dog to bind/unbind; hold Shift + right click: 1-5 free %, 6-10 all %, 11 unbind all, 12+ cancel; release Shift to confirm; tap Shift to cycle; left click uses the mode. Main-hand wand takes priority.");return true;}
         if(args[0].equalsIgnoreCase("mode") && sender instanceof Player player) {showMode(player);return true;}
+        if(args[0].equalsIgnoreCase("wands")&&sender instanceof Player player){player.sendMessage("Your active wand IDs: "+bindings.ledger().owned(player.getUniqueId()));return true;}
+        if(args[0].equalsIgnoreCase("forget")&&sender instanceof Player player&&args.length==2){try{boolean done=bindings.ledger().retire(UUID.fromString(args[1]),player.getUniqueId());player.sendMessage(done?"Wand retired; its bindings and orders released.":"No active wand of yours has that ID.");}catch(IllegalArgumentException ex){player.sendMessage("Use /dogwand forget <wand UUID> from /dogwand wands.");}return true;}
         if(!sender.hasPermission("dogwand.admin")) {sender.sendMessage("You do not have permission.");return true;}
         if(args[0].equalsIgnoreCase("give")) {
             Player player=args.length>1?Bukkit.getPlayerExact(args[1]):sender instanceof Player p?p:null;
             if(player==null) {sender.sendMessage("Specify an online player.");return true;}
-            var overflow=player.getInventory().addItem(createWand());
+            var created=createWand();bindings.ledger().observe(created,player.getUniqueId(),"p:"+player.getUniqueId());var overflow=player.getInventory().addItem(created);
             overflow.values().forEach(item->player.getWorld().dropItemNaturally(player.getLocation(),item));return true;
         }
         if(args[0].equalsIgnoreCase("reload")) {reloadConfig();installRecipe();sender.sendMessage("Dog Wand configuration reloaded.");return true;}

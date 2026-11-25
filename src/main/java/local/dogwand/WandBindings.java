@@ -11,19 +11,23 @@ public final class WandBindings {
     private final DogWandPlugin plugin;
     private final NamespacedKey idKey,dogsKey,uiKey;
     private final DogRegistry registry;
+    private final WandLedger ledger;
     public record Selection(UUID id,Set<UUID> dogs,EquipmentSlot hand) {}
     public record RegionSelection(UUID world,GuardRegion region){}
     public WandBindings(DogWandPlugin plugin) {
         this.plugin=plugin;idKey=new NamespacedKey(plugin,"wand_id");dogsKey=new NamespacedKey(plugin,"bound_dogs");uiKey=new NamespacedKey(plugin,"wand_ui_version");
         registry=new DogRegistry(plugin.getDataFolder().toPath().resolve("known-dogs.yml"));
+        ledger=new WandLedger(plugin,registry);
     }
     public DogRegistry registry(){return registry;}
+    public WandLedger ledger(){return ledger;}
     public void flush(){try{registry.flush();}catch(java.io.IOException ex){plugin.getLogger().log(java.util.logging.Level.SEVERE,"Could not save dog registry",ex);}}
     public Set<UUID> dogs(ItemStack item){if(!plugin.isWand(item))return Set.of();var data=item.getItemMeta().getPersistentDataContainer();return registry.living(data.has(dogsKey,PersistentDataType.STRING)?decode(data.get(dogsKey,PersistentDataType.STRING)):Set.of());}
     public boolean prune(ItemStack item){
-        if(!plugin.isWand(item))return false;var meta=item.getItemMeta();var data=meta.getPersistentDataContainer();
+        if(!plugin.isWand(item))return false;var previous=item.getItemMeta();ledger.observe(item,null,null);boolean normalized=!previous.equals(item.getItemMeta());var meta=item.getItemMeta();var data=meta.getPersistentDataContainer();
         Set<UUID> ids=data.has(dogsKey,PersistentDataType.STRING)?decode(data.get(dogsKey,PersistentDataType.STRING)):Set.of(),living=registry.living(ids);
-        if(ids.equals(living)&&BindingLore.withCount(meta.lore(),living.size()).equals(meta.lore()))return false;
+        try{registry.bindings(UUID.fromString(data.get(idKey,PersistentDataType.STRING)),living);}catch(RuntimeException ignored){}
+        if(ids.equals(living)&&BindingLore.withCount(meta.lore(),living.size()).equals(meta.lore()))return normalized;
         BindingLore.write(meta,dogsKey,living);item.setItemMeta(meta);return true;
     }
     public void pruneInventory(Inventory inventory){for(int slot=0;slot<inventory.getSize();slot++){var item=inventory.getItem(slot);if(prune(item))inventory.setItem(slot,item);}}
@@ -42,12 +46,15 @@ public final class WandBindings {
         EquipmentSlot hand=plugin.isWand(player.getInventory().getItemInMainHand())?EquipmentSlot.HAND:EquipmentSlot.OFF_HAND;
         ItemStack item=player.getInventory().getItem(hand);
         if(!plugin.isWand(item)) return null;
+        if(!ledger.owns(player,item))return null;
+        ledger.observe(item,player.getUniqueId(),"p:"+player.getUniqueId());
         if(prune(item))player.getInventory().setItem(hand,item);
         var meta=item.getItemMeta();var data=meta.getPersistentDataContainer();
         String saved=data.has(idKey,PersistentDataType.STRING)?data.get(idKey,PersistentDataType.STRING):null;
         UUID id;
         try{id=UUID.fromString(saved);}catch(Exception ex){id=UUID.randomUUID();data.set(idKey,PersistentDataType.STRING,id.toString());item.setItemMeta(meta);player.getInventory().setItem(hand,item);}
         String encoded=data.has(dogsKey,PersistentDataType.STRING)?data.get(dogsKey,PersistentDataType.STRING):null;
+        registry.bindings(id,decode(encoded));
         return new Selection(id,Collections.unmodifiableSet(decode(encoded)),hand);
     }
     public void bind(Player player,Entity directTarget) {
@@ -65,15 +72,29 @@ public final class WandBindings {
         ItemStack item=player.getInventory().getItem(selection.hand());var meta=item.getItemMeta();
         BindingLore.write(meta,dogsKey,ids);item.setItemMeta(meta);
         player.getInventory().setItem(selection.hand(),item);
+        registry.bindings(selection.id(),ids);flush();
         plugin.feedback(player,(removed?"Unbound ":"Bound ")+wolf.getName()+" | "+ids.size()+" dog(s) on this wand");
         player.playSound(player.getLocation(),Sound.ENTITY_EXPERIENCE_ORB_PICKUP,.4f,1.4f);
     }
-    public void bindAll(Player player){
-        var selection=selection(player);if(selection==null)return;plugin.dogCommands().observeLoaded();
-        Set<UUID> ids=new LinkedHashSet<>(selection.dogs());int before=ids.size();ids.addAll(registry.owned(player.getUniqueId()));
-        var item=player.getInventory().getItem(selection.hand());var meta=item.getItemMeta();BindingLore.write(meta,dogsKey,ids);item.setItemMeta(meta);player.getInventory().setItem(selection.hand(),item);flush();
-        plugin.feedback(player,"Bound "+(ids.size()-before)+" more dogs | "+ids.size()+" known dogs on this wand");player.playSound(player.getLocation(),Sound.ENTITY_EXPERIENCE_ORB_PICKUP,.4f,1.4f);
+    public void bindAll(Player player){bindPercent(player,100);}
+    public void bindPercent(Player player,int percent){
+        bindPercent(player,percent,false);
     }
+    private void bindPercent(Player player,int percent,boolean all){
+        if(percent<=0){plugin.feedback(player,"Bulk binding cancelled.");return;}
+        var selection=selection(player);if(selection==null)return;plugin.dogCommands().observeLoaded();
+        List<UUID> free=new ArrayList<>(registry.owned(player.getUniqueId()).stream().filter(id->all||!registry.bound(id)).toList());Collections.shuffle(free);
+        int take=BulkSelection.count(free.size(),percent);Set<UUID> ids=new LinkedHashSet<>(selection.dogs());int before=ids.size();ids.addAll(free.subList(0,take));
+        var item=player.getInventory().getItem(selection.hand());var meta=item.getItemMeta();BindingLore.write(meta,dogsKey,ids);item.setItemMeta(meta);player.getInventory().setItem(selection.hand(),item);registry.bindings(selection.id(),ids);flush();
+        plugin.feedback(player,"Selected "+take+" ("+percent+"% "+(all?"all tamed":"free")+") | Added "+(ids.size()-before)+" | "+ids.size()+" on this wand");player.playSound(player.getLocation(),Sound.ENTITY_EXPERIENCE_ORB_PICKUP,.4f,1.4f);
+    }
+    public void confirmBulk(Player player,int clicks){var choice=BulkSelection.choice(clicks);switch(choice.scope()){
+        case FREE->bindPercent(player,choice.percent(),false);case ALL->bindPercent(player,choice.percent(),true);
+        case CANCEL->plugin.feedback(player,"Bulk binding cancelled.");
+        case UNBIND->{var selected=selection(player);if(selected==null)return;if(!plugin.dogCommands().unbindGroup(player,selected.id(),selected.dogs()))return;var item=player.getInventory().getItem(selected.hand());var meta=item.getItemMeta();BindingLore.write(meta,dogsKey,Set.of());item.setItemMeta(meta);player.getInventory().setItem(selected.hand(),item);registry.bindings(selected.id(),Set.of());autoState(player,0);fetchEnabled(player,false);guardRegion(player,null);flush();plugin.feedback(player,"Unbound all dogs from this wand.");}
+    }}
+    public boolean fetchEnabled(Player player){var item=plugin.activeWand(player);if(item==null)return false;var data=item.getItemMeta().getPersistentDataContainer();var key=new NamespacedKey(plugin,"fetch_enabled");return data.has(key,PersistentDataType.BYTE)&&data.get(key,PersistentDataType.BYTE)==1;}
+    public void fetchEnabled(Player player,boolean enabled){var selected=selection(player);if(selected==null)return;var item=player.getInventory().getItem(selected.hand());var meta=item.getItemMeta();meta.getPersistentDataContainer().set(new NamespacedKey(plugin,"fetch_enabled"),PersistentDataType.BYTE,(byte)(enabled?1:0));item.setItemMeta(meta);player.getInventory().setItem(selected.hand(),item);}
     public RegionSelection guardRegion(Player player){
         var item=plugin.activeWand(player);if(item==null)return null;var data=item.getItemMeta().getPersistentDataContainer();var key=new NamespacedKey(plugin,"guard_region");
         if(!data.has(key,PersistentDataType.STRING))return null;
