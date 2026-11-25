@@ -1,0 +1,117 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "BBB",
+    "BSB",
+    "BBB"
+  ],
+  "key": {
+    "B": "minecraft:bone",
+    "S": "minecraft:stick"
+  },
+  "result": {
+    "id": "minecraft:stick",
+    "count": 1,
+    "components": {
+      "minecraft:max_stack_size": 1,
+      "minecraft:item_name": {
+        "text": "Dog Wand",
+        "color": "gold",
+        "bold": true
+      },
+      "minecraft:item_model": "dogwand:dog_wand",
+      "minecraft:custom_data": {
+        "PublicBukkitValues": {
+          "dogwand:wand": 1
+        }
+      },
+      "minecraft:consumable": {
+        "consume_seconds": 3600,
+        "animation": "none",
+        "has_consume_particles": false,
+        "sound": "minecraft:intentionally_empty"
+      },
+      "minecraft:lore": [
+        {
+          "text": "LEFT Use mode   SHIFT Cycle",
+          "color": "yellow",
+          "italic": false
+        },
+        {
+          "text": "RIGHT Bind / unbind your dog",
+          "color": "yellow",
+          "italic": false
+        },
+        {
+          "text": "SHIFT + RIGHT Bind all your dogs",
+          "color": "yellow",
+          "italic": false
+        },
+        {
+          "text": ""
+        },
+        {
+          "text": "> Point Order",
+          "color": "aqua",
+          "bold": true,
+          "italic": false
+        },
+        {
+          "text": "  Sit / Stand",
+          "color": "dark_gray",
+          "bold": false,
+          "italic": false
+        },
+        {
+          "text": "  Highlight Dogs",
+          "color": "dark_gray",
+          "bold": false,
+          "italic": false
+        },
+        {
+          "text": "  Auto Target",
+          "color": "dark_gray",
+          "bold": false,
+          "italic": false
+        },
+        {
+          "text": "  Feed Dogs",
+          "color": "dark_gray",
+          "bold": false,
+          "italic": false
+        },
+        {
+          "text": "  Guard Region",
+          "color": "dark_gray",
+          "bold": false,
+          "italic": false
+        },
+        {
+          "text": "  Release Orders",
+          "color": "dark_gray",
+          "bold": false,
+          "italic": false
+        },
+        {
+          "text": ""
+        },
+        {
+          "text": "Point at a block to stay, or a mob",
+          "color": "gray",
+          "italic": false
+        },
+        {
+          "text": "to attack.",
+          "color": "gray",
+          "italic": false
+        },
+        {
+          "text": "0 bound dog(s)",
+          "color": "dark_aqua",
+          "italic": false
+        }
+      ]
+    }
+  }
+}

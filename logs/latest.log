@@ -1,0 +1,9 @@
+[03:34:20] [main/INFO]: [STDOUT]: PASS real Paper item stores unique bindings and matching count together
+[03:34:20] [main/INFO]: [STDOUT]: PASS binding count update preserves styled mode description
+[03:34:20] [main/INFO]: [STDOUT]: PASS unbinding immediately changes lore on the stored item
+[03:34:20] [main/INFO]: [STDOUT]: PASS other item snapshots cannot change this wand's count
+[03:34:20] [main/INFO]: [STDOUT]: PASS death removes UUID and displayed count on a real Paper item
+[03:34:20] [main/INFO]: [STDOUT]: PASS stale and duplicate count rows repair even when binding IDs already match
+[03:34:20] [main/INFO]: [STDOUT]: PASS legacy item without lore gains a count
+[03:34:20] [main/INFO]: [STDOUT]: PASS refresh is stable when count already matches
+[03:34:20] [main/INFO]: [STDOUT]: Guard/binding checks passed: 21

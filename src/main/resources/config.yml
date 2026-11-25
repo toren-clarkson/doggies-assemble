@@ -1,0 +1,9 @@
+# Modes use stable IDs and registration order. Point Order is currently the only mode.
+click-cooldown-ticks: 4
+movement-speed: 1.2
+arrival-radius: 0.85
+path-recalculate-ticks: 20
+# Stage long journeys through short, ordinary navigation requests.
+navigation-step-blocks: 24
+attack-players: true
+feedback: true
