@@ -2,6 +2,21 @@
 
 Requires Java 25 and Paper 26.3. No client mods.
 
+## Builds and downloads
+
+See [dist/README.md](dist/README.md) for the current downloads. Distributions separate into `dist/resourcepack/<minecraft-version>/`, `dist/datapack/<minecraft-version>/`, and `dist/plugin/<minecraft-version>/<server-type>/`. Full bundles live under `dist/bundles/<minecraft-version>/<server-type>/`. Filenames include the Dog Wand release number so future releases can coexist.
+
+Currently only Minecraft 26.3 with Paper has an implementation. Packs share a Minecraft-version directory; server plugins separate by backend. Other versions and backends require compatible implementations and validation before adding their distributions.
+
+Build with Java 25, Node.js and cached Paper dependencies available through `DOGWAND_PAPER_HOME` (an extracted Paper 26.3 server directory containing `libraries/` and `versions/`). The local fallback uses `../corrupted-overworld/.cache/test-server`.
+
+```sh
+node tools/build.mjs
+node tools/package.mjs
+```
+
+The first command creates the plugin and both packs. The second creates a full development bundle. Maven's `package` goal also writes the plugin JAR into the same dedicated plugin directory; it does not build the packs. Increment `pom.xml` and `src/main/resources/plugin.yml` together for each new Dog Wand release. Existing release artifacts stay in place.
+
 ## Upgrade / installation
 
 Stop the server, replace the old JAR in plugins/ and the old crafting ZIP in your world's datapacks/ directory, then start the server. Keep only one installed copy of each. The resource-pack artwork has not changed; the bundle includes it for new installs.

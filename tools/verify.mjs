@@ -1,19 +1,19 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {spawn} from 'node:child_process';
-import {root,base,serverRoot,compile,zip} from './build.mjs';
+import {root,base,serverRoot,compile,zip,artifacts} from './build.mjs';
 
 const work=process.env.DOGWAND_TEST_HOME || path.join(root,'.cache/server-1.3.1');fs.mkdirSync(path.join(work,'plugins'),{recursive:true});
 for(const dir of ['libraries','versions','cache']) {
   const destination=path.join(work,dir);
   if(!fs.existsSync(destination)) fs.cpSync(path.join(serverRoot,dir),destination,{recursive:true});
 }
-compile([path.join(root,'tests/DogWandFixture.java')],path.join(root,'.cache/fixture-classes'),[path.join(root,'dist/dog-wand-paper-26.3.jar')]);
+compile([path.join(root,'tests/DogWandFixture.java')],path.join(root,'.cache/fixture-classes'),[artifacts.plugin]);
 fs.writeFileSync(path.join(root,'.cache/fixture-classes/plugin.yml'),"name: DogWandFixture\nversion: '1'\nmain: DogWandFixture\napi-version: '26.3'\ndepend: [DogWand]\ncommands:\n  dwtest:\n    permission: dwfixture.admin\npermissions:\n  dwfixture.admin:\n    default: op\n");
 zip(path.join(root,'.cache/fixture-classes'),path.join(work,'plugins/DogWandFixture.jar'));
-fs.copyFileSync(path.join(root,'dist/dog-wand-paper-26.3.jar'),path.join(work,'plugins/DogWand.jar'));
+fs.copyFileSync(artifacts.plugin,path.join(work,'plugins/DogWand.jar'));
 fs.mkdirSync(path.join(work,'world/datapacks'),{recursive:true});
-fs.copyFileSync(path.join(root,'dist/dog-wand-datapack-26.3.zip'),path.join(work,'world/datapacks/dog-wand.zip'));
+fs.copyFileSync(artifacts.datapack,path.join(work,'world/datapacks/dog-wand.zip'));
 fs.writeFileSync(path.join(work,'eula.txt'),'eula=true\n');
 fs.writeFileSync(path.join(work,'server.properties'),'server-ip=127.0.0.1\nserver-port=25625\nonline-mode=false\nwhite-list=false\nspawn-protection=0\nview-distance=3\nsimulation-distance=3\nlevel-type=minecraft:flat\ngenerator-settings={"layers":[{"block":"minecraft:bedrock","height":1}],"biome":"minecraft:plains"}\nmax-tick-time=120000\npause-when-empty-seconds=-1\nallow-nether=false\n');
 fs.writeFileSync(path.join(work,'bukkit.yml'),'settings:\n  allow-end: false\n');

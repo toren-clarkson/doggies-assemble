@@ -5,6 +5,17 @@ import {spawnSync} from 'node:child_process';
 
 export const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 export const base=path.dirname(root);
+// Only this target is implemented. Other versions/backends need compatible code and pack formats.
+export const target={minecraft:'26.3',server:'paper',java:25,datapackFormat:[121,0],resourcepackFormat:[97,1]};
+export const releaseVersion=fs.readFileSync(path.join(root,'pom.xml'),'utf8').match(/<version>([^<]+)<\/version>/)?.[1];
+if(!releaseVersion || !/^[\w.-]+$/.test(releaseVersion))throw new Error('Missing or invalid project version in pom.xml');
+const release=`dog-wand-${releaseVersion}`;
+export const artifacts={
+  plugin:path.join(root,'dist/plugin',target.minecraft,target.server,`${release}-${target.server}-${target.minecraft}.jar`),
+  datapack:path.join(root,'dist/datapack',target.minecraft,`${release}-datapack-${target.minecraft}.zip`),
+  resourcepack:path.join(root,'dist/resourcepack',target.minecraft,`${release}-resourcepack-${target.minecraft}.zip`),
+  bundle:path.join(root,'dist/bundles',target.minecraft,target.server,`Dog-Wand-${releaseVersion}-${target.server}-${target.minecraft}-development.zip`)
+};
 export const serverRoot=process.env.DOGWAND_PAPER_HOME || path.join(base,'corrupted-overworld/.cache/test-server');
 export function files(dir,suffix) {
   return fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?files(path.join(dir,e.name),suffix):e.name.endsWith(suffix)?[path.join(dir,e.name)]:[]);
@@ -20,7 +31,7 @@ export function compile(sources,out,extra=[]) {
   if(!libraries.some(p=>p.includes('paper-api-26.3'))) throw new Error('Set DOGWAND_PAPER_HOME to an extracted Paper 26.3 server directory.');
   const cp=[...libraries,...files(path.join(serverRoot,'versions'),'.jar'),...extra].join(path.delimiter);
   const args=path.join(root,'.cache',path.basename(out)+'.args');fs.mkdirSync(path.dirname(args),{recursive:true});
-  fs.writeFileSync(args,['-encoding','UTF-8','--release','25','-classpath',JSON.stringify(cp.replaceAll('\\','/')),'-d',JSON.stringify(out.replaceAll('\\','/')),...sources.map(p=>JSON.stringify(p.replaceAll('\\','/')))].join('\n'));
+  fs.writeFileSync(args,['-encoding','UTF-8','--release',String(target.java),'-classpath',JSON.stringify(cp.replaceAll('\\','/')),'-d',JSON.stringify(out.replaceAll('\\','/')),...sources.map(p=>JSON.stringify(p.replaceAll('\\','/')))].join('\n'));
   run(process.env.DOGWAND_JAVAC || 'javac',['@'+args]);
 }
 export function zip(source,destination) {
@@ -30,11 +41,12 @@ export function zip(source,destination) {
 function json(file,data) {fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,JSON.stringify(data,null,2)+'\n');}
 
 export function build() {
+  const pluginVersion=fs.readFileSync(path.join(root,'src/main/resources/plugin.yml'),'utf8').match(/^version:\s*(.+)$/m)?.[1]?.trim();
+  if(pluginVersion!==releaseVersion)throw new Error('pom.xml and plugin.yml release versions must match');
   const out=path.join(root,'.cache/classes');
   compile(files(path.join(root,'src/main/java'),'.java'),out);
   fs.cpSync(path.join(root,'src/main/resources'),out,{recursive:true});
-  const dist=path.join(root,'dist');fs.mkdirSync(dist,{recursive:true});
-  zip(out,path.join(dist,'dog-wand-paper-26.3.jar'));
+  zip(out,artifacts.plugin);
   const components={
     'minecraft:max_stack_size':1,
     'minecraft:item_name':{text:'Dog Wand',color:'gold',bold:true},
@@ -54,15 +66,15 @@ export function build() {
     ]
   };
   const dp=path.join(root,'datapack');
-  json(path.join(dp,'pack.mcmeta'),{pack:{min_format:[121,0],max_format:[121,0],description:'Dog Wand crafting recipe · requires DogWand Paper plugin'}});
+  json(path.join(dp,'pack.mcmeta'),{pack:{min_format:target.datapackFormat,max_format:target.datapackFormat,description:'Dog Wand crafting recipe · requires DogWand Paper plugin'}});
   json(path.join(dp,'data/dogwand/recipe/dog_wand.json'),{type:'minecraft:crafting_shaped',category:'equipment',pattern:['BBB','BSB','BBB'],key:{B:'minecraft:bone',S:'minecraft:stick'},result:{id:'minecraft:stick',count:1,components}});
   json(path.join(dp,'data/dogwand/advancement/recipe.json'),{criteria:{has_bone:{trigger:'minecraft:inventory_changed',conditions:{items:[{items:'minecraft:bone'}]}}},rewards:{recipes:['dogwand:dog_wand']}});
-  zip(dp,path.join(dist,'dog-wand-datapack-26.3.zip'));
+  zip(dp,artifacts.datapack);
   const rp=path.join(root,'resourcepack');
-  json(path.join(rp,'pack.mcmeta'),{pack:{min_format:[97,1],max_format:[97,1],description:'Dog Wand · bone-tipped wooden wand'}});
+  json(path.join(rp,'pack.mcmeta'),{pack:{min_format:target.resourcepackFormat,max_format:target.resourcepackFormat,description:'Dog Wand · bone-tipped wooden wand'}});
   json(path.join(rp,'assets/dogwand/items/dog_wand.json'),{model:{type:'minecraft:model',model:'dogwand:item/dog_wand'}});
   json(path.join(rp,'assets/dogwand/models/item/dog_wand.json'),{parent:'minecraft:item/handheld',textures:{layer0:'dogwand:item/dog_wand'}});
-  if(fs.existsSync(path.join(rp,'assets/dogwand/textures/item/dog_wand.png'))) zip(rp,path.join(dist,'dog-wand-resourcepack-26.3.zip'));
-  console.log('BUILD OK:',dist);
+  if(fs.existsSync(path.join(rp,'assets/dogwand/textures/item/dog_wand.png'))) zip(rp,artifacts.resourcepack);
+  console.log('BUILD OK:',artifacts.plugin,artifacts.datapack,artifacts.resourcepack);
 }
 if(process.argv[1] && path.resolve(process.argv[1])===fileURLToPath(import.meta.url)) build();

@@ -1,5 +1,5 @@
 import path from 'node:path';
-import {root,serverRoot,compile,files,run} from './build.mjs';
+import {root,serverRoot,compile,files,run,artifacts} from './build.mjs';
 const out=path.join(root,'.cache/geometry');
-compile([path.join(root,'tests/GeometryChecks.java')],out,[path.join(root,'dist/dog-wand-paper-26.3.jar')]);
-run('java',['-classpath',[out,path.join(root,'dist/dog-wand-paper-26.3.jar'),...files(path.join(serverRoot,'libraries'),'.jar')].join(path.delimiter),'GeometryChecks']);
+compile([path.join(root,'tests/GeometryChecks.java')],out,[artifacts.plugin]);
+run('java',['-classpath',[out,artifacts.plugin,...files(path.join(serverRoot,'libraries'),'.jar')].join(path.delimiter),'GeometryChecks']);

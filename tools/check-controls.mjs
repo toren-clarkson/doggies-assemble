@@ -1,5 +1,5 @@
 import path from 'node:path';
-import {root,serverRoot,compile,files,run} from './build.mjs';
+import {root,serverRoot,compile,files,run,artifacts} from './build.mjs';
 const out=path.join(root,'.cache/controls');
-compile([path.join(root,'tests/ControlChecks.java')],out,[path.join(root,'dist/dog-wand-paper-26.3.jar')]);
-run('java',['-classpath',[out,path.join(root,'dist/dog-wand-paper-26.3.jar'),...files(path.join(serverRoot,'libraries'),'.jar'),...files(path.join(serverRoot,'versions'),'.jar')].join(path.delimiter),'local.dogwand.ControlChecks']);
+compile([path.join(root,'tests/ControlChecks.java')],out,[artifacts.plugin]);
+run('java',['-classpath',[out,artifacts.plugin,...files(path.join(serverRoot,'libraries'),'.jar'),...files(path.join(serverRoot,'versions'),'.jar')].join(path.delimiter),'local.dogwand.ControlChecks']);
